@@ -1,53 +1,8 @@
 // Importing required modules
 const vscode = require('vscode');
-const { Configuration, OpenAIApi } = require('openai');
-const fs = require('fs');
-const path = require('path');
 const tasks = require('./tasks.json');
-
-// Configuring OpenAI API
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
-// Initializing variables
-let conversationHistory = '';
-let totalTokens = 0;
-let basePrompt = '';
-let model = vscode.workspace.getConfiguration('gpt-assist').get('model');
-let tokenStatusBarItem;
-
-/**
- * Function to call OpenAI API and get the response
- * @param {string} text - The text to be sent to the OpenAI API
- * @param {string} task - The task to be performed by the OpenAI API
- * @returns {string} output - The response from the OpenAI API
- */
-async function callOpenAI(text, task) {
-    const prompt = task + text;
-    const output = "This is a pregenerated response.";
-    totalTokens += 60;
-    tokenStatusBarItem.text = `Tokens used: ${totalTokens}`;
-
-    // Append the input and output to the conversation history
-    conversationHistory += `\nUser: ${task}:\n${text}\nAI: ${output}`;
-
-    // Check if the markdown file exists, if not, create it
-    const filePath = path.join(__dirname, 'conversation.md');
-    if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, '');
-    }
-
-    // Append the input and output to the markdown file
-    fs.appendFileSync(filePath, `---\n\n**User:**\n${task}:\n${text}\n\n_AI:_\n${output}\n\n`);
-
-    // Open the markdown file in a new editor
-    const document = await vscode.workspace.openTextDocument(filePath);
-    await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
-
-    return output;
-}
+const { callOpenAI } = require('./openai');
+const { getTotalTokens, tokenStatusBarItem } = require('./vars');
 
 /**
  * Function to activate the extension
@@ -56,8 +11,7 @@ async function callOpenAI(text, task) {
 function activate(context) {
     console.log('Congratulations, your extension "gpt-assist" is now active!');
 
-    tokenStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    tokenStatusBarItem.text = `Tokens used: ${totalTokens}`;
+    tokenStatusBarItem.text = `Tokens used: ${getTotalTokens()}`;
     tokenStatusBarItem.show();
     context.subscriptions.push(tokenStatusBarItem);
 
@@ -82,7 +36,7 @@ function activate(context) {
             if (task === 'Custom Prompt') {
                 task = await vscode.window.showInputBox({ prompt: 'Enter your custom prompt' });
             }
-            
+
             else {
                 task = tasks[task]
             }

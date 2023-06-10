@@ -48,7 +48,9 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@dqbd/tiktoken": "^1.0.7",
     "dotenv": "^16.0.3",
+    "nedb-promises": "^6.2.1",
     "openai": "^3.2.1"
   }
 }
