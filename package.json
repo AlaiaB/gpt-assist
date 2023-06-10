@@ -20,6 +20,10 @@
       {
         "command": "gpt-assist.call_gpt",
         "title": "Call GPT"
+      },
+      {
+        "command": "gpt-assist.insertMemory",
+        "title": "Insert Memory"
       }
     ],
     "keybindings": [

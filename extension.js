@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const tasks = require('./tasks.json');
 const { callOpenAI } = require('./openai');
 const { getTotalTokens, tokenStatusBarItem } = require('./vars');
-
+const { insertMemoryFromFile } = require('./database');
 /**
  * Function to activate the extension
  * @param {vscode.ExtensionContext} context - The context in which the extension is run
@@ -42,7 +42,7 @@ function activate(context) {
             }
 
             try {
-                const response = await callOpenAI(text, task);
+                const response = await callOpenAI(text, task, true, true);
                 // Display the OpenAI response to the user
                 vscode.window.showInformationMessage(response);
             } catch (err) {
@@ -51,7 +51,16 @@ function activate(context) {
         }
     });
 
-    context.subscriptions.push(helloWorldDisposable, openAIDisposable);
+    let insertMemoryCommand = vscode.commands.registerCommand('gpt-assist.insertMemory', async () => {
+        try {
+          await insertMemoryFromFile();
+          vscode.window.showInformationMessage('Memory inserted successfully.');
+        } catch (error) {
+          vscode.window.showErrorMessage('Failed to insert memory: ' + error.message);
+        }
+    });
+    
+    context.subscriptions.push(helloWorldDisposable, openAIDisposable, insertMemoryCommand);
 }
 
 /**

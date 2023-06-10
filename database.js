@@ -11,7 +11,7 @@ let db = fs.existsSync(dbPath) ? Datastore.create({ filename: dbPath }) : null;
  * @param {string} prompt - The prompt text.
  * @param {string} output - The output text.
  */
-async function insertMemory(prompt, output) {
+async function insertMemory(prompt, output, summary, importance) {
     try {
         if (!db) {
             db = Datastore.create({ filename: dbPath });
@@ -19,7 +19,7 @@ async function insertMemory(prompt, output) {
         let now = Date.now();
         let lastAccessedMemory = await db.findOne({}).sort({ accessedAt: -1 });
         let timeDifference = now - (lastAccessedMemory ? lastAccessedMemory.accessedAt : now);
-        let newMemory = { prompt: prompt, output: output, accessedAt: now, timeDifference: timeDifference, recencyScore: 1 };
+        let newMemory = { prompt: prompt, output: output, summary: summary, importance: importance, accessedAt: now, timeDifference: timeDifference, recencyScore: 1 };
         await db.insert(newMemory);
     } catch (err) {
         console.error('Error inserting memory:', err);
@@ -78,4 +78,16 @@ async function retrieveMemory(query) {
     }
 }
 
-module.exports = { insertMemory, calculateRecencyScores, retrieveMemory };
+async function insertMemoryFromFile() {
+    const filePath = path.join(__dirname, 'dummy_prompt.txt');
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const [prompt, output] = fileContents.split('\n');
+    let summaryMatch = output.match(/Summary: (.*?)\n/);
+    let importanceMatch = output.match(/Importance: (.*?)\n/);
+    let summary = summaryMatch ? summaryMatch[1] : '';
+    let importance = importanceMatch ? importanceMatch[1] : '';
+    insertMemory(prompt, output, summary, importance);
+  }
+  
+  
+module.exports = { insertMemory, calculateRecencyScores, retrieveMemory, insertMemoryFromFile };

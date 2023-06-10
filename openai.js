@@ -3,7 +3,7 @@ const { get_encoding } = require('@dqbd/tiktoken');
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
-const { setTotalTokens, getTotalTokens, tokenStatusBarItem } = require('./vars');
+const { setTotalTokens, getTotalTokens, tokenStatusBarItem, projectDescription } = require('./vars');
 const { insertMemory, retrieveMemory } = require('./database');
 
 const configuration = new Configuration({
@@ -18,10 +18,23 @@ let model = "dummy" // vscode.workspace.getConfiguration('gpt-assist').get('mode
  * @param {string} task - The prompt associated to the task to be performed by the OpenAI API
  * @returns {string} output - The response from the OpenAI API
  */
-async function callOpenAI(text, task) {
-  // Retrieve a relevant memory from the database
-  let memory = await retrieveMemory({ text: text , task: task});
-  let prompt = task + (memory ? memory.prompt + '\n' : '') + text;
+async function callOpenAI(text, task, retrieveMemories, insertNewMemory) {
+  let memory;
+  let prompt = task;
+  const outputChannel = vscode.window.createOutputChannel('GPT-Assist');
+
+  // Retrieve a relevant memory from the database if required
+  if (retrieveMemories) {
+    memory = await retrieveMemory({ text: text , task: task});
+    prompt += memory ? '\nSummary of previous interaction: ' + memory.summary + '\n' : '';
+  }
+
+  prompt += text;
+
+   // Add a short prompt asking the model to rate the importance of the interaction
+   if (insertNewMemory) {
+    prompt += '\n\nPlease provide a short summary of this interaction and rate its importance to the project described below:\n' + projectDescription;
+  }
 
   // Get the tokenizer and calculate the token count only when the model is not "dummy"
   let tokenCount;
@@ -54,11 +67,25 @@ async function callOpenAI(text, task) {
       return; // Exit the function if the user doesn't confirm
     }
   } else {
-    output = "This is a pregenerated response.";
-  }
+    // Display the prompt in an output channel
+    outputChannel.clear();
+    const filePath = path.join(__dirname, 'dummy_prompt.txt');
+    fs.writeFileSync(filePath, prompt);
+    output = 'The prompt has been written to dummy_prompt.txt. Please provide an output.';
+    outputChannel.appendLine(output);
+    outputChannel.show();
+    output = undefined
+    }
 
-  // Store the prompt and output as a new memory in the database
-  insertMemory(prompt, output);
+  // Store the prompt and output as a new memory in the database if required
+  if (insertNewMemory && output !== undefined) {
+    // Parse the summary and importance from the output
+    let summaryMatch = output.match(/Summary: (.*?)\n/);
+    let importanceMatch = output.match(/Importance: (.*?)\n/);
+    let summary = summaryMatch ? summaryMatch[1] : '';
+    let importance = importanceMatch ? importanceMatch[1] : '';
+    insertMemory(prompt, output, summary, importance);
+  }
 
   setTotalTokens(getTotalTokens() + tokenCount);
   tokenStatusBarItem.text = `Tokens used: ${getTotalTokens()}`;
