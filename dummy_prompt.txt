@@ -1,0 +1,44 @@
+As an AI developed by OpenAI, you have been trained on a diverse range of internet text. But you're more than just a language model. You have the ability to understand and generate human-like text based on the input given to you. Now, I have a piece of Python code here that lacks documentation. Your task is to generate comprehensive and clear comments for this code, explaining what each part of the code does. Here's the code:
+Summary of previous interaction: undefined
+const esprima = require('esprima');
+const estraverse = require('estraverse');
+const fs = require('fs');
+const path = require('path');
+
+async function parseFile(filePath) {
+    let code = fs.readFileSync(filePath, 'utf8');
+    let ast = esprima.parse(code, { range: true });
+    let functions = [];
+
+    estraverse.traverse(ast, {
+        enter: function (node) {
+            if (node.type === 'FunctionDeclaration') {
+                let funcCode = code.substring(node.range[0], node.range[1]);
+                let funcName = node.id ? node.id.name : null;
+                functions.push({ name: funcName, code: funcCode });
+            }
+        }
+    });
+
+    return functions;
+}
+
+async function parseWorkspace(workspacePath, callback) {
+    let files = fs.readdirSync(workspacePath);
+
+    for (let file of files) {
+        if (path.extname(file) !== '.js') continue;
+
+        let filePath = path.join(workspacePath, file);
+        let functions = await parseFile(filePath);
+
+        for (let func of functions) {
+            callback(filePath, func.name, func.code);
+        }
+    }
+}
+
+module.exports = { parseFile, parseWorkspace };
+
+Please provide a short summary of this interaction and rate its importance to the project described below:
+GPT-Assist is a VS Code extension that integrates OpenAI's GPT-3 into the coding workflow. It offers features like context-aware AI responses, simulated memory, code snippets, auto-documentation, code formatting, testing, error checking, and version control integration.
