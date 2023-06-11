@@ -6,3 +6,4 @@ conversation.md
 *.log
 vsc-extension-quickstart.mc
 GPT-README.md
+env/

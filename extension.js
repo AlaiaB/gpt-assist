@@ -1,9 +1,13 @@
 // Importing required modules
 const vscode = require('vscode');
 const tasks = require('./tasks.json');
+const path = require('path');
 const { callOpenAI } = require('./openai');
 const { getTotalTokens, tokenStatusBarItem } = require('./vars');
-const { insertMemoryFromFile } = require('./database');
+const { insertMemoryFromFile, getFileInitializationFlag, setFileInitializationFlag, insertFunction } = require('./database');
+const { parseWorkspace } = require('./codeParser');
+const { generateEmbedding } = require('./embedder');
+
 /**
  * Function to activate the extension
  * @param {vscode.ExtensionContext} context - The context in which the extension is run
@@ -59,8 +63,33 @@ function activate(context) {
           vscode.window.showErrorMessage('Failed to insert memory: ' + error.message);
         }
     });
+
+    let initializeWorkspaceDisposable = vscode.commands.registerCommand('gpt-assist.initializeWorkspace', async function () {
+        const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.fsPath;
     
-    context.subscriptions.push(helloWorldDisposable, openAIDisposable, insertMemoryCommand);
+        await parseWorkspace(workspaceFolder, async (filePath, funcName, funcCode) => {
+            let isInitialized = await getFileInitializationFlag(filePath);
+            
+            if (!isInitialized) {
+                // generate embedding for function
+                let embedding = await generateEmbedding(funcCode);
+    
+                // insert the function into your database
+                await insertFunction(filePath, funcName, embedding);
+    
+                // Mark the file as initialized
+                await setFileInitializationFlag(filePath, true);
+    
+                vscode.window.showInformationMessage(`File ${filePath} has been initialized.`);
+            } else {
+                vscode.window.showInformationMessage(`File ${filePath} has already been initialized.`);
+            }
+        });
+    
+        vscode.window.showInformationMessage('Workspace initialization complete.');
+    });
+
+    context.subscriptions.push(helloWorldDisposable, openAIDisposable, insertMemoryCommand, initializeWorkspaceDisposable);
 }
 
 /**

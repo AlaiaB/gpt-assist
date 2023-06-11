@@ -24,6 +24,10 @@
       {
         "command": "gpt-assist.insertMemory",
         "title": "Insert Memory"
+      },
+      {
+        "command": "gpt-assist.initializeWorkspace",
+        "title": "Initialize workspace memory"
       }
     ],
     "keybindings": [

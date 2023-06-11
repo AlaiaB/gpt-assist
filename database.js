@@ -6,6 +6,95 @@ const fs = require('fs');
 let dbPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gpt-assist.db');
 let db = fs.existsSync(dbPath) ? Datastore.create({ filename: dbPath }) : null;
 
+let funcDbPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gpt-assist-functions.db');
+let funcDb = fs.existsSync(funcDbPath) ? Datastore.create({ filename: funcDbPath }) : null;
+
+let metaDbPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gpt-assist-meta.db');
+let metaDb = fs.existsSync(metaDbPath) ? Datastore.create({ filename: metaDbPath }) : null;
+
+/**
+ * Sets the initialization flag for a file in the database.
+ * @param {string} filePath - The path to the file.
+ * @param {boolean} isInitialized - Whether or not the file has been indexed.
+ */
+async function setFileInitializationFlag(filePath, isInitialized) {
+    try {
+        if (!metaDb) {
+            metaDb = Datastore.create({ filename: metaDbPath });
+        }
+
+        // Check if the flag already exists
+        let flag = await metaDb.findOne({ key: filePath });
+        
+        if (flag) {
+            // If the flag exists, update it
+            await metaDb.update({ key: filePath }, { $set: { value: isInitialized } });
+        } else {
+            // If the flag does not exist, insert it
+            await metaDb.insert({ key: filePath, value: isInitialized });
+        }
+    } catch (err) {
+        console.error('Error setting file initialization flag:', err);
+    }
+}
+
+/**
+ * Gets the initialization flag for a file from the database.
+ * @param {string} filePath - The path to the file.
+ * @returns {boolean} Whether or not the file has been indexed.
+ */
+async function getFileInitializationFlag(filePath) {
+    try {
+        if (!metaDb) {
+            return null;
+        }
+
+        // Retrieve the flag
+        let flag = await metaDb.findOne({ key: filePath });
+        return flag ? flag.value : null;
+    } catch (err) {
+        console.error('Error getting file initialization flag:', err);
+    }
+}
+
+/**
+ * Inserts a new function into the database.
+ * @param {string} path - The file path.
+ * @param {string} name - The function name.
+ * @param {Array} embedding - The embedding.
+ */
+async function insertFunction(path, name, embedding) {
+    try {
+        if (!funcDb) {
+            funcDb = Datastore.create({ filename: funcDbPath });
+        }
+
+        let newFunction = { path: path, name: name, embedding: embedding, lastModified: new Date() };
+        await funcDb.insert(newFunction);
+    } catch (err) {
+        console.error('Error inserting function:', err);
+    }
+}
+
+/**
+ * Retrieves a function from the database based on its name.
+ * @param {string} name - The function name.
+ * @returns {Object} The function.
+ */
+async function retrieveFunction(name) {
+    try {
+        if (!funcDb) {
+            return null;
+        }
+
+        // Retrieve the function
+        let func = await funcDb.findOne({ name: name });
+        return func;
+    } catch (err) {
+        console.error('Error retrieving function:', err);
+    }
+}
+
 /**
  * Inserts a new memory into the database.
  * @param {string} prompt - The prompt text.
@@ -90,4 +179,6 @@ async function insertMemoryFromFile() {
   }
   
   
-module.exports = { insertMemory, calculateRecencyScores, retrieveMemory, insertMemoryFromFile };
+module.exports = { insertMemory, calculateRecencyScores, retrieveMemory, insertMemoryFromFile,
+    insertFunction, retrieveFunction,
+    setFileInitializationFlag, getFileInitializationFlag };
