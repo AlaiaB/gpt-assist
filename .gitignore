@@ -8,3 +8,4 @@ vsc-extension-quickstart.mc
 GPT-README.md
 env/
 dummy_prompt.txt
+embedding/

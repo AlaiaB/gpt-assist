@@ -1,0 +1,22 @@
+About to read from stdin...
+Read from stdin: async function generateEmbedding(text) {
+        return new Promise((resolve, reject) => {
+            const python = spawn('python', ['./embedder.py']);
+            let dataString = '';
+    
+            python.stdout.on('data', (data) => {
+                dataString += data.toString();
+            });
+    
+            python.stdout.on('end', () => {
+                try {
+                    resolve(JSON.parse(dataString));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+    
+            python.stdin.write(text);
+            python.stdin.end();
+        });
+    }

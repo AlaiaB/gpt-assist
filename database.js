@@ -69,7 +69,7 @@ async function insertFunction(path, name, embedding) {
             funcDb = Datastore.create({ filename: funcDbPath });
         }
 
-        let newFunction = { path: path, name: name, embedding: embedding, lastModified: new Date() };
+        let newFunction = { path: path, name: name, embedding: embedding.embedding, lastModified: new Date() };
         await funcDb.insert(newFunction);
     } catch (err) {
         console.error('Error inserting function:', err);

@@ -1,7 +1,6 @@
 // Importing required modules
 const vscode = require('vscode');
 const tasks = require('./tasks.json');
-const path = require('path');
 const { callOpenAI } = require('./openai');
 const { getTotalTokens, tokenStatusBarItem } = require('./vars');
 const { insertMemoryFromFile, getFileInitializationFlag, setFileInitializationFlag, insertFunction } = require('./database');
